@@ -1,7 +1,7 @@
 {
   "name": "importer-monorep-submodules",
   "displayName": "importer-ms",
-  "publisher": "AlexandrPetyaykin",
+  "publisher": "Alexandr Petyay",
   "description": "Fixes the problem of adding a company prefix to the path",
   "version": "0.0.2",
   "repository": {
