@@ -10,7 +10,6 @@ import {
   Range,
   TextDocumentWillSaveEvent,
 } from "vscode";
-
 import { readdirSync, lstatSync } from "fs";
 
 const isDirectory = (source: string) => lstatSync(source).isDirectory();
@@ -47,6 +46,11 @@ export function activate(ctx: ExtensionContext) {
 export class ImportFixer {
   public checkForBrokenImports(doc: TextDocument) {
     const editor = window.activeTextEditor;
+
+    const prefix = workspace
+      .getConfiguration()
+      .get("importer.view.addingPrefixPath") as string;
+
     if (!editor) {
       return;
     }
@@ -59,23 +63,21 @@ export class ImportFixer {
       return;
     }
 
-    const packagesDirectoryMatch = doc.fileName.match(
-      /(.*\/packages)\/[^\/]*\//
-    );
-
-    if (!packagesDirectoryMatch) {
-      return;
-    }
-
-    const prefix = workspace
-      .getConfiguration()
-      .get("importer.view.addingPrefixPath") as string;
-
     if (!prefix) {
       return;
     }
+    const packagesName = "packages";
 
-    const packagesDirectory = packagesDirectoryMatch[1];
+    const packagesIndex = doc.fileName.indexOf(packagesName);
+
+    if (packagesIndex === -1) {
+      return;
+    }
+
+    const packagesDirectory = doc.fileName.slice(
+      0,
+      packagesIndex + packagesName.length
+    );
 
     const modules = getDirectories(packagesDirectory).map((e) => e.name);
 
