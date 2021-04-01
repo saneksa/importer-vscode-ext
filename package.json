@@ -1,11 +1,28 @@
 {
-  "name": "importer",
-  "displayName": "importer",
-  "publisher": "IM",
-  "description": "",
-  "version": "0.0.1",
+  "name": "importer-monorep-submodules",
+  "displayName": "importer-ms",
+  "publisher": "Alexandr Petyaykin",
+  "description": "Fixes the problem of adding a company prefix to the path",
+  "version": "0.0.2",
+  "repository": {
+    "url": "https://github.com/saneksa/importer-vscode-ext"
+  },
   "engines": {
     "vscode": "^1.50.0"
+  },
+  "contributes": {
+    "configuration": [
+      {
+        "title": "Prefix to be added to the path",
+        "properties": {
+          "importer.view.addingPrefixPath": {
+            "type": "string",
+            "description": "Prefix to be added to the path",
+            "scope": "window"
+          }
+        }
+      }
+    ]
   },
   "categories": [
     "Other"

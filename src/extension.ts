@@ -35,7 +35,7 @@ const importRegex = new RegExp(
 );
 
 export function activate(ctx: ExtensionContext) {
-  console.log("Typescript MonoRepo Import Helper is now active");
+  console.log("Typescript MonoRepo with Submodules init");
 
   const importFixer = new ImportFixer();
   const controller = new ImportFixerController(importFixer);
@@ -67,6 +67,14 @@ export class ImportFixer {
       return;
     }
 
+    const prefix = workspace
+      .getConfiguration()
+      .get("importer.view.addingPrefixPath") as string;
+
+    if (!prefix) {
+      return;
+    }
+
     const packagesDirectory = packagesDirectoryMatch[1];
 
     const modules = getDirectories(packagesDirectory).map((e) => e.name);
@@ -75,21 +83,23 @@ export class ImportFixer {
 
     editor.edit((builder) => {
       while (true) {
-        const mathValue = match.next();
+        const iterator = match.next();
+        const value: RegExpMatchArray = iterator.value;
 
-        if (mathValue.done) {
+        if (iterator.done) {
           break;
         }
 
-        const importPath = mathValue.value[2];
-
-        const name = "@im/";
+        const importPath = value[2];
 
         if (modules.some((m) => importPath.includes(m))) {
-          if (!importPath.includes(name) && mathValue.value.index) {
-            builder.insert(
-              doc.positionAt(doc.getText().indexOf(importPath)),
-              name
+          if (!importPath.includes(prefix) && value.index) {
+            builder.replace(
+              new Range(
+                doc.positionAt(value.index),
+                doc.positionAt(value.index + value[0].length)
+              ),
+              `import ${value[1].trim()} from "${prefix}${value[2]}";`
             );
           }
         }
@@ -107,11 +117,9 @@ class ImportFixerController {
   constructor(ImportFixer: ImportFixer) {
     this._importFixer = ImportFixer;
 
-    // subscribe to selection change and editor activation events
     let subscriptions: Disposable[] = [];
     workspace.onWillSaveTextDocument(this._onEvent, this, subscriptions);
 
-    // create a combined disposable from both event subscriptions
     this._disposable = Disposable.from(...subscriptions);
   }
 
