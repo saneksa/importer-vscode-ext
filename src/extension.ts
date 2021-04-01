@@ -94,7 +94,7 @@ export class ImportFixer {
 
         const importPath = value[2];
 
-        if (modules.some((m) => importPath.includes(m))) {
+        if (modules.some((m) => importPath.indexOf(`${m}/`) === 0)) {
           if (!importPath.includes(prefix) && value.index) {
             builder.replace(
               new Range(
