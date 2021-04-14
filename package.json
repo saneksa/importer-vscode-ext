@@ -35,6 +35,7 @@
   "scripts": {
     "vscode:prepublish": "yarn run compile",
     "package": "vsce package",
+    "package:ci": "vsce package --out ext.vsix",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "yarn run compile && yarn run lint",

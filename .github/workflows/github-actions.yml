@@ -18,5 +18,11 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm install
-      - run: npm run package
+      - run: yarn
+      - run: yarn package:ci
+      - name: "Upload Artifact"
+        uses: actions/upload-artifact@v2
+        with:
+          name: extension-artefact
+          path: ./ext.vsix
+          retention-days: 365
