@@ -11,8 +11,8 @@ import {
   TextDocumentWillSaveEvent,
   TextEditorEdit,
 } from "vscode";
-import fs from "fs";
-import path from "path";
+import { lstatSync, readdirSync } from "fs";
+import { resolve, basename, dirname } from "path";
 
 type TCheckRelativeImportParams = {
   doc: TextDocument;
@@ -22,11 +22,10 @@ type TCheckRelativeImportParams = {
   value: RegExpMatchArray;
 };
 
-const isDirectory = (source: string) => fs.lstatSync(source).isDirectory();
+const isDirectory = (source: string) => lstatSync(source).isDirectory();
 
 const getDirectories = (source: string) =>
-  fs
-    .readdirSync(source)
+  readdirSync(source)
     .map((name) => ({ source, name }))
     .filter((e) => isDirectory(e.source));
 
@@ -68,43 +67,40 @@ export class ImportFixer {
       .getConfiguration()
       .get("importer.view.addingPrefixPath") as string;
 
-    if (relativeImportRegex.test(importPath)) {
-      const absoluteForPackagesPath = path.resolve(
-        doc.fileName,
-        "..",
-        importPath
+    if (!relativeImportRegex.test(importPath)) {
+      return;
+    }
+
+    const absoluteForPackagesPath = resolve(doc.fileName, "..", importPath);
+
+    let isExists = false;
+
+    try {
+      isExists =
+        readdirSync(dirname(absoluteForPackagesPath)).filter((v) =>
+          v.includes(basename(absoluteForPackagesPath))
+        )?.length > 0;
+    } catch (error) {
+      console.log("importer-ms ", error);
+      return;
+    }
+
+    const correctImportPath = absoluteForPackagesPath.substring(
+      packagesDirectory.length + 1
+    );
+
+    if (
+      isExists &&
+      !importPath.includes(prefix) &&
+      typeof value.index === "number"
+    ) {
+      builder.replace(
+        new Range(
+          doc.positionAt(value.index),
+          doc.positionAt(value.index + value[0].length)
+        ),
+        `import ${value[1].trim()} from "${prefix}${correctImportPath}";`
       );
-
-      let isExists = false;
-
-      try {
-        isExists =
-          fs
-            .readdirSync(path.dirname(absoluteForPackagesPath))
-            .filter((v) => v.includes(path.basename(absoluteForPackagesPath)))
-            ?.length > 0;
-      } catch (error) {
-        console.log("importer-ms ", error);
-        return;
-      }
-
-      const correctImportPath = absoluteForPackagesPath.substring(
-        packagesDirectory.length + 1
-      );
-
-      if (
-        isExists &&
-        !importPath.includes(prefix) &&
-        typeof value.index === "number"
-      ) {
-        builder.replace(
-          new Range(
-            doc.positionAt(value.index),
-            doc.positionAt(value.index + value[0].length)
-          ),
-          `import ${value[1].trim()} from "${prefix}${correctImportPath}";`
-        );
-      }
     }
   }
 
