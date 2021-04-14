@@ -25,4 +25,4 @@ jobs:
         with:
           name: extension-artefact
           path: ./ext.vsix
-          retention-days: 365
+          retention-days: 90
