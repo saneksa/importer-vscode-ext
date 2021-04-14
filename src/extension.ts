@@ -9,13 +9,24 @@ import {
   Position,
   Range,
   TextDocumentWillSaveEvent,
+  TextEditorEdit,
 } from "vscode";
-import { readdirSync, lstatSync } from "fs";
+import fs from "fs";
+import path from "path";
 
-const isDirectory = (source: string) => lstatSync(source).isDirectory();
+type TCheckRelativeImportParams = {
+  doc: TextDocument;
+  importPath: string;
+  packagesDirectory: string;
+  builder: TextEditorEdit;
+  value: RegExpMatchArray;
+};
+
+const isDirectory = (source: string) => fs.lstatSync(source).isDirectory();
 
 const getDirectories = (source: string) =>
-  readdirSync(source)
+  fs
+    .readdirSync(source)
     .map((name) => ({ source, name }))
     .filter((e) => isDirectory(e.source));
 
@@ -33,6 +44,8 @@ const importRegex = new RegExp(
   "mg"
 );
 
+const relativeImportRegex = /^[\/..]{3}.*$/;
+
 export function activate(ctx: ExtensionContext) {
   console.log("Typescript MonoRepo with Submodules init");
 
@@ -44,6 +57,57 @@ export function activate(ctx: ExtensionContext) {
 }
 
 export class ImportFixer {
+  private checkRelativeImport({
+    doc,
+    importPath,
+    packagesDirectory,
+    builder,
+    value,
+  }: TCheckRelativeImportParams) {
+    const prefix = workspace
+      .getConfiguration()
+      .get("importer.view.addingPrefixPath") as string;
+
+    if (relativeImportRegex.test(importPath)) {
+      const absoluteForPackagesPath = path.resolve(
+        doc.fileName,
+        "..",
+        importPath
+      );
+
+      let isExists = false;
+
+      try {
+        isExists =
+          fs
+            .readdirSync(path.dirname(absoluteForPackagesPath))
+            .filter((v) => v.includes(path.basename(absoluteForPackagesPath)))
+            ?.length > 0;
+      } catch (error) {
+        console.log("importer-ms ", error);
+        return;
+      }
+
+      const correctImportPath = absoluteForPackagesPath.substring(
+        packagesDirectory.length + 1
+      );
+
+      if (
+        isExists &&
+        !importPath.includes(prefix) &&
+        typeof value.index === "number"
+      ) {
+        builder.replace(
+          new Range(
+            doc.positionAt(value.index),
+            doc.positionAt(value.index + value[0].length)
+          ),
+          `import ${value[1].trim()} from "${prefix}${correctImportPath}";`
+        );
+      }
+    }
+  }
+
   public checkForBrokenImports(doc: TextDocument) {
     const editor = window.activeTextEditor;
 
@@ -93,6 +157,14 @@ export class ImportFixer {
         }
 
         const importPath = value[2];
+
+        this.checkRelativeImport({
+          doc,
+          importPath,
+          packagesDirectory,
+          builder,
+          value,
+        });
 
         if (modules.some((m) => importPath.indexOf(`${m}/`) === 0)) {
           if (!importPath.includes(prefix) && typeof value.index === "number") {
