@@ -5,7 +5,7 @@
     "target": "es6",
     "outDir": "out",
     "lib": ["es6", "ESNext"],
-    "importHelpers": true,
+    "importHelpers": false,
     "sourceMap": true,
     "rootDir": "src",
     "strict": true /* enable all strict type-checking options */
