@@ -44,7 +44,7 @@ const importRegex = new RegExp(
   "mg"
 );
 
-const relativeImportRegex = /^[\/..]{3}.*$/;
+const relativeImportRegex = /^[\/..]{4}.*$/;
 
 export function activate(ctx: ExtensionContext) {
   console.log("Typescript MonoRepo with Submodules init");
@@ -158,13 +158,17 @@ export class ImportFixer {
 
         const importPath = value[2];
 
-        this.checkRelativeImport({
-          doc,
-          importPath,
-          packagesDirectory,
-          builder,
-          value,
-        });
+        try {
+          this.checkRelativeImport({
+            doc,
+            importPath,
+            packagesDirectory,
+            builder,
+            value,
+          });
+        } catch (error) {
+          console.log("importer-ms ", error);
+        }
 
         if (modules.some((m) => importPath.indexOf(`${m}/`) === 0)) {
           if (!importPath.includes(prefix) && typeof value.index === "number") {
