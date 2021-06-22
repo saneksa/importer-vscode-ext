@@ -3,7 +3,7 @@
   "displayName": "importer-ms",
   "publisher": "Jokerok",
   "description": "Fixes the problem of adding a company prefix to the path",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "repository": {
     "url": "https://github.com/saneksa/importer-vscode-ext"
   },
