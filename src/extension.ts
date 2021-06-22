@@ -12,7 +12,7 @@ import {
   TextEditorEdit,
 } from "vscode";
 import { lstatSync, readdirSync } from "fs";
-import { resolve, basename, dirname } from "path";
+import { resolve, basename, dirname, sep } from "path";
 
 type TCheckRelativeImportParams = {
   doc: TextDocument;
@@ -85,9 +85,9 @@ export class ImportFixer {
       return;
     }
 
-    const correctImportPath = absoluteForPackagesPath.substring(
-      packagesDirectory.length + 1
-    );
+    const correctImportPath = absoluteForPackagesPath
+      .substring(packagesDirectory.length + 1)
+      .replaceAll(sep, "/");
 
     if (
       isExists &&
