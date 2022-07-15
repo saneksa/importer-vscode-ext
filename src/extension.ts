@@ -76,9 +76,11 @@ export class ImportFixer {
     let isExists = false;
 
     try {
+      const absPath = absoluteForPackagesPath.split("?")[0];
+
       isExists =
-        readdirSync(dirname(absoluteForPackagesPath)).filter((v) =>
-          v.includes(basename(absoluteForPackagesPath))
+        readdirSync(dirname(absPath)).filter((v) =>
+          v.includes(basename(absPath))
         )?.length > 0;
     } catch (error) {
       console.log("importer-ms ", error);
