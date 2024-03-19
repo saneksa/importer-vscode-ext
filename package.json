@@ -19,6 +19,21 @@
             "type": "string",
             "description": "Prefix to be added to the path",
             "scope": "window"
+          },
+          "importer.view.relativeImportDepth": {
+            "type": "number",
+            "description": "Relative import depth at which auto-correction will be performed",
+            "scope": "window",
+            "default": 2
+          },
+          "importer.view.excludePathsAutoFix": {
+            "type": "array",
+            "description": "Paths that will be excluded from auto-repair",
+            "scope": "window",
+            "items": {
+              "type": "string"
+            },
+            "default": []
           }
         }
       }

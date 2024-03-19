@@ -43,7 +43,8 @@ const importRegex = new RegExp(
   "mg"
 );
 
-const relativeImportRegex = /^[\/..]{4}.*$/;
+const getRelativeImportRegex = (depth: number) =>
+  new RegExp(`^[\/..]{${depth * 2}}.*$`);
 
 export function activate(ctx: ExtensionContext) {
   console.log("Typescript MonoRepo with Submodules init");
@@ -67,7 +68,19 @@ export class ImportFixer {
       .getConfiguration()
       .get("importer.view.addingPrefixPath") as string;
 
-    if (!relativeImportRegex.test(importPath)) {
+    const excludePaths = workspace
+      .getConfiguration()
+      .get("importer.view.excludePathsAutoFix") as string[];
+
+    const depth = workspace
+      .getConfiguration()
+      .get("importer.view.relativeImportDepth") as number;
+
+    const isExclude = excludePaths.some((path) =>
+      new RegExp(path).test(doc.fileName)
+    );
+
+    if (!getRelativeImportRegex(depth).test(importPath) || isExclude) {
       return;
     }
 
