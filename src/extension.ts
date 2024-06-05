@@ -2,17 +2,15 @@
 import {
   window,
   workspace,
-  commands,
   Disposable,
   ExtensionContext,
   TextDocument,
-  Position,
   Range,
   TextDocumentWillSaveEvent,
   TextEditorEdit,
 } from "vscode";
 import { lstatSync, readdirSync } from "fs";
-import { resolve, basename, dirname, sep } from "path";
+import { resolve, basename, dirname, sep, posix } from "path";
 
 type TCheckRelativeImportParams = {
   doc: TextDocument;
@@ -46,9 +44,9 @@ const importRegex = new RegExp(
 const getRelativeImportRegex = (depth: number) =>
   new RegExp(`^[\/..]{${depth * 2}}.*$`);
 
-export function activate(ctx: ExtensionContext) {
-  console.log("Typescript MonoRepo with Submodules init");
+const replaceWinSep = (p: string) => p.replaceAll(posix.win32.sep, posix.sep);
 
+export function activate(ctx: ExtensionContext) {
   const importFixer = new ImportFixer();
   const controller = new ImportFixerController(importFixer);
 
@@ -77,7 +75,7 @@ export class ImportFixer {
       .get("importer.view.relativeImportDepth") as number;
 
     const isExclude = excludePaths.some((path) =>
-      new RegExp(path).test(doc.fileName)
+      new RegExp(replaceWinSep(path)).test(replaceWinSep(doc.fileName))
     );
 
     if (!getRelativeImportRegex(depth).test(importPath) || isExclude) {
