@@ -6,7 +6,19 @@
 
 # Using
 
-Add ` "importer.view.addingPrefixPath": "@your-company/"` to your config file`
+```json
+// *.code-workspace
+{
+  "importer.view.defaultPrefixPath": "@test",
+  "importer.view.matchingPrefixToPath": {
+    "@testing": "libs/base",
+    "@test": "packages"
+  },
+  "importer.view.checkingDirNames": ["packages", "libs"],
+  "importer.view.excludePathsAutoFix": ["packages/test"],
+  "importer.view.relativeImportDepth": 2
+}
+```
 
 ---
 
