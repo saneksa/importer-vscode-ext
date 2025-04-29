@@ -16,9 +16,18 @@
       {
         "title": "Prefix to be added to the path",
         "properties": {
-          "importer.view.addingPrefixPath": {
+          "importer.view.defaultPrefixPath": {
             "type": "string",
-            "description": "Prefix to be added to the path",
+            "description": "Default prefix to be added to the path",
+            "scope": "window"
+          },
+          "importer.view.matchingPrefixToPath": {
+            "type": "object",
+            "patternProperties": {
+              "^@": {
+                "type": "string"
+              }
+            },
             "scope": "window"
           },
           "importer.view.relativeImportDepth": {
@@ -26,6 +35,17 @@
             "description": "Relative import depth at which auto-correction will be performed",
             "scope": "window",
             "default": 2
+          },
+          "importer.view.checkingDirNames": {
+            "type": "array",
+            "description": "Paths that will be excluded from auto-repair",
+            "scope": "window",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "packages"
+            ]
           },
           "importer.view.excludePathsAutoFix": {
             "type": "array",

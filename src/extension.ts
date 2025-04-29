@@ -18,6 +18,8 @@ type TCheckRelativeImportParams = {
   packagesDirectory: string;
   builder: TextEditorEdit;
   value: RegExpMatchArray;
+  prefix: string;
+  absoluteForPackagesPath: string;
 };
 
 const isDirectory = (source: string) => lstatSync(source).isDirectory();
@@ -54,6 +56,29 @@ export function activate(ctx: ExtensionContext) {
   ctx.subscriptions.push(importFixer);
 }
 
+function findMatchingAlias(
+  config: Record<string, string>,
+  fullPath: string,
+  projectRoot: string
+) {
+  let bestMatch = null;
+  let longestMatchLength = 0;
+
+  for (const [alias, relativePath] of Object.entries(config)) {
+    const resolvedPath = resolve(projectRoot, relativePath.replace("/*", ""));
+
+    if (
+      fullPath.startsWith(resolvedPath) &&
+      resolvedPath.length > longestMatchLength
+    ) {
+      bestMatch = alias;
+      longestMatchLength = resolvedPath.length;
+    }
+  }
+
+  return bestMatch;
+}
+
 export class ImportFixer {
   private checkRelativeImport({
     doc,
@@ -61,11 +86,9 @@ export class ImportFixer {
     packagesDirectory,
     builder,
     value,
+    prefix,
+    absoluteForPackagesPath,
   }: TCheckRelativeImportParams) {
-    const prefix = workspace
-      .getConfiguration()
-      .get("importer.view.addingPrefixPath") as string;
-
     const excludePaths = workspace
       .getConfiguration()
       .get("importer.view.excludePathsAutoFix") as string[];
@@ -81,8 +104,6 @@ export class ImportFixer {
     if (!getRelativeImportRegex(depth).test(importPath) || isExclude) {
       return;
     }
-
-    const absoluteForPackagesPath = resolve(doc.fileName, "..", importPath);
 
     let isExists = false;
 
@@ -112,7 +133,9 @@ export class ImportFixer {
           doc.positionAt(value.index),
           doc.positionAt(value.index + value[0].length)
         ),
-        `import ${value[1].trim()} from "${prefix}${correctImportPath}";`
+        value[1] === undefined
+          ? `import "${prefix}/${correctImportPath}";`
+          : `import ${value[1].trim()} from "${prefix}/${correctImportPath}";`
       );
     }
   }
@@ -120,9 +143,17 @@ export class ImportFixer {
   public checkForBrokenImports(doc: TextDocument) {
     const editor = window.activeTextEditor;
 
-    const prefix = workspace
+    const checkingDirNames = workspace
       .getConfiguration()
-      .get("importer.view.addingPrefixPath") as string;
+      .get("importer.view.checkingDirNames") as string[];
+
+    const defaultPrefix = workspace
+      .getConfiguration()
+      .get("importer.view.defaultPrefixPath") as string;
+
+    const matchingPrefixToPath = workspace
+      .getConfiguration()
+      .get("importer.view.matchingPrefixToPath") as Record<string, string>;
 
     if (!editor) {
       return;
@@ -136,61 +167,84 @@ export class ImportFixer {
       return;
     }
 
-    if (!prefix) {
-      return;
-    }
-    const packagesName = "packages";
-
-    const packagesIndex = doc.fileName.indexOf(packagesName);
-
-    if (packagesIndex === -1) {
+    if (!defaultPrefix) {
       return;
     }
 
-    const packagesDirectory = doc.fileName.slice(
-      0,
-      packagesIndex + packagesName.length
-    );
+    checkingDirNames.forEach((dirName) => {
+      const packagesIndex = doc.fileName.indexOf(dirName);
 
-    const modules = getDirectories(packagesDirectory).map((e) => e.name);
+      if (packagesIndex === -1) {
+        return;
+      }
 
-    const match = doc.getText().matchAll(importRegex);
+      const packagesDirectory = doc.fileName.slice(
+        0,
+        packagesIndex + dirName.length
+      );
 
-    editor.edit((builder) => {
-      while (true) {
-        const iterator = match.next();
-        const value: RegExpMatchArray = iterator.value;
+      const rootProjectPath = resolve(packagesDirectory, "..");
 
-        if (iterator.done) {
-          break;
-        }
+      const modules = getDirectories(packagesDirectory).map((e) => e.name);
 
-        const importPath = value[2];
+      const match = doc.getText().matchAll(importRegex);
 
-        try {
-          this.checkRelativeImport({
-            doc,
-            importPath,
-            packagesDirectory,
-            builder,
-            value,
-          });
-        } catch (error) {
-          console.log("importer-ms ", error);
-        }
+      editor.edit((builder) => {
+        while (true) {
+          const iterator = match.next();
+          const value: RegExpMatchArray = iterator.value;
 
-        if (modules.some((m) => importPath.indexOf(`${m}/`) === 0)) {
-          if (!importPath.includes(prefix) && typeof value.index === "number") {
-            builder.replace(
-              new Range(
-                doc.positionAt(value.index),
-                doc.positionAt(value.index + value[0].length)
-              ),
-              `import ${value[1].trim()} from "${prefix}${value[2]}";`
-            );
+          if (iterator.done) {
+            break;
+          }
+
+          const importPath = value[2];
+          const absoluteForPackagesPath = resolve(
+            doc.fileName,
+            "..",
+            importPath
+          );
+
+          const prefix =
+            findMatchingAlias(
+              matchingPrefixToPath,
+              absoluteForPackagesPath,
+              rootProjectPath
+            ) || defaultPrefix;
+
+          try {
+            this.checkRelativeImport({
+              doc,
+              importPath,
+              packagesDirectory,
+              builder,
+              value,
+              prefix,
+              absoluteForPackagesPath,
+            });
+          } catch (error) {
+            console.log("importer-ms ", error);
+          }
+
+          if (modules.some((m) => importPath.indexOf(`${m}/`) === 0)) {
+            if (
+              !importPath.includes(prefix) &&
+              typeof value.index === "number"
+            ) {
+              builder.replace(
+                new Range(
+                  doc.positionAt(value.index),
+                  doc.positionAt(value.index + value[0].length)
+                ),
+
+                value[1] === undefined
+                  ? `import "${prefix}/${value[2]}";`
+                  : `import ${value[1].trim()} from "${prefix}/${value[2]}";`
+              );
+            }
           }
         }
-      }
+      });
     });
   }
 
