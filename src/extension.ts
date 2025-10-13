@@ -22,6 +22,8 @@ type TCheckRelativeImportParams = {
   absoluteForPackagesPath: string;
 };
 
+type TMatchingPrefixToPath = Record<string, string[]>;
+
 const isDirectory = (source: string) => lstatSync(source).isDirectory();
 
 const getDirectories = (source: string) =>
@@ -57,22 +59,24 @@ export function activate(ctx: ExtensionContext) {
 }
 
 function findMatchingAlias(
-  config: Record<string, string>,
+  config: TMatchingPrefixToPath,
   fullPath: string,
   projectRoot: string
 ) {
   let bestMatch = null;
   let longestMatchLength = 0;
 
-  for (const [alias, relativePath] of Object.entries(config)) {
-    const resolvedPath = resolve(projectRoot, relativePath.replace("/*", ""));
+  for (const [alias, relativePaths] of Object.entries(config)) {
+    for (const relativePath of relativePaths) {
+      const resolvedPath = resolve(projectRoot, relativePath.replace("/*", ""));
 
-    if (
-      fullPath.startsWith(resolvedPath) &&
-      resolvedPath.length > longestMatchLength
-    ) {
-      bestMatch = alias;
-      longestMatchLength = resolvedPath.length;
+      if (
+        fullPath.startsWith(resolvedPath) &&
+        resolvedPath.length > longestMatchLength
+      ) {
+        bestMatch = alias;
+        longestMatchLength = resolvedPath.length;
+      }
     }
   }
 
@@ -153,7 +157,7 @@ export class ImportFixer {
 
     const matchingPrefixToPath = workspace
       .getConfiguration()
-      .get("importer.view.matchingPrefixToPath") as Record<string, string>;
+      .get("importer.view.matchingPrefixToPath") as TMatchingPrefixToPath;
 
     if (!editor) {
       return;
@@ -192,7 +196,7 @@ export class ImportFixer {
       editor.edit((builder) => {
         while (true) {
           const iterator = match.next();
-          const value: RegExpMatchArray = iterator.value;
+          const value: RegExpMatchArray = iterator.value!;
 
           if (iterator.done) {
             break;
